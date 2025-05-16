@@ -4,12 +4,75 @@
   <meta charset="UTF-8" />
   <title>WolfikGame</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #ffd6e7, #a8e6ff);
+      font-family: sans-serif;
+      color: #333;
+      text-align: center;
+    }
+    h1 {
+      font-size: 3rem;
+      color: #ff4081;
+      margin-top: 30px;
+    }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-gap: 10px;
+      justify-content: center;
+      margin-top: 30px;
+    }
+    .cell {
+      width: 100px;
+      height: 100px;
+      background: #fff;
+      font-size: 2.5rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+    .status {
+      font-size: 1.2rem;
+      margin-top: 20px;
+    }
+  </style>
 </head>
 <body>
-  <h1>Добро пожаловать в WolfikGame 💗💙</h1>
-  <p>Игра загружается...</p>
+  <h1>WolfikGame 💗💙</h1>
+  <div class="board" id="board"></div>
+  <div class="status" id="status">Ходит 💗</div>
+
   <script>
-    location.href = "https://vulfik-shmulfik-n82b.vercel.app"; // редирект на твою игру
+    const board = document.getElementById('board');
+    const status = document.getElementById('status');
+    let current = '💗';
+    let cells = Array(9).fill(null);
+
+    function renderBoard() {
+      board.innerHTML = '';
+      cells.forEach((val, i) => {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.textContent = val || '';
+        cell.onclick = () => makeMove(i);
+        board.appendChild(cell);
+      });
+    }
+
+    function makeMove(i) {
+      if (cells[i]) return;
+      cells[i] = current;
+      current = current === '💗' ? '💙' : '💗';
+      status.textContent = `Ходит ${current}`;
+      renderBoard();
+    }
+
+    renderBoard();
   </script>
 </body>
 </html>
