@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -6,22 +8,36 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body {
+      font-family: sans-serif;
       margin: 0;
       padding: 0;
-      background: linear-gradient(135deg, #ffd6e7, #a8e6ff);
-      font-family: sans-serif;
-      color: #333;
       text-align: center;
+      background: linear-gradient(135deg, #ffd6e7, #a8e6ff);
     }
     h1 {
-      font-size: 3rem;
+      font-size: 2.5rem;
+      margin-top: 1em;
       color: #ff4081;
-      margin-top: 30px;
+    }
+    .choose {
+      margin-top: 2em;
+    }
+    .emoji {
+      font-size: 2rem;
+      cursor: pointer;
+      padding: 10px;
+    }
+    .selected {
+      border: 2px solid #ff4081;
+      border-radius: 8px;
+    }
+    .hidden {
+      display: none;
     }
     .board {
       display: grid;
       grid-template-columns: repeat(3, 100px);
-      grid-gap: 10px;
+      gap: 10px;
       justify-content: center;
       margin-top: 30px;
     }
@@ -37,42 +53,173 @@
       cursor: pointer;
     }
     .status {
-      font-size: 1.2rem;
       margin-top: 20px;
+      font-size: 1.2rem;
+    }
+    .timer {
+      margin-top: 10px;
+      height: 10px;
+      width: 100px;
+      background: #ddd;
+      margin-left: auto;
+      margin-right: auto;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    .timer-inner {
+      height: 100%;
+      width: 100%;
+      background: #ff4081;
+      transition: width 1s linear;
+    }
+    .score {
+      margin-top: 15px;
+      font-size: 1rem;
     }
   </style>
 </head>
 <body>
-  <h1>WolfikGame 💗💙</h1>
-  <div class="board" id="board"></div>
-  <div class="status" id="status">Ходит 💗</div>
+  <h1>WolfikGame 🐺</h1>
+
+  <div id="setup" class="choose">
+    <p>Игрок 1 — выбери эмодзи:</p>
+    <div id="choose1">
+      <span class="emoji">🐺</span>
+      <span class="emoji">🐱</span>
+      <span class="emoji">👽</span>
+      <span class="emoji">💗</span>
+    </div>
+    <p>Игрок 2 — выбери эмодзи:</p>
+    <div id="choose2">
+      <span class="emoji">🐼</span>
+      <span class="emoji">🦊</span>
+      <span class="emoji">💙</span>
+      <span class="emoji">🐸</span>
+    </div>
+    <button onclick="startGame()">Начать игру</button>
+  </div>
+
+  <div id="game" class="hidden">
+    <div class="board" id="board"></div>
+    <div class="status" id="status">Ходит...</div>
+    <div class="timer"><div class="timer-inner" id="timerBar"></div></div>
+    <div class="score" id="score">💗 0 — 0 💙</div>
+  </div>
 
   <script>
-    const board = document.getElementById('board');
-    const status = document.getElementById('status');
-    let current = '💗';
-    let cells = Array(9).fill(null);
+    let current = 0;
+    let board = Array(9).fill(null);
+    let players = ["", ""];
+    let timer;
+    let timeLeft = 10;
+    let scores = [0, 0];
 
-    function renderBoard() {
-      board.innerHTML = '';
-      cells.forEach((val, i) => {
-        const cell = document.createElement('div');
-        cell.className = 'cell';
-        cell.textContent = val || '';
+    const boardEl = document.getElementById("board");
+    const statusEl = document.getElementById("status");
+    const timerBar = document.getElementById("timerBar");
+    const scoreEl = document.getElementById("score");
+
+    function startGame() {
+      const em1 = document.querySelector("#choose1 .emoji.selected");
+      const em2 = document.querySelector("#choose2 .emoji.selected");
+      if (!em1 || !em2 || em1.textContent === em2.textContent) {
+        alert("Выбери два разных эмодзи!");
+        return;
+      }
+      players = [em1.textContent, em2.textContent];
+      scores = JSON.parse(localStorage.getItem("wolfik_scores") || "[0,0]");
+      document.getElementById("setup").classList.add("hidden");
+      document.getElementById("game").classList.remove("hidden");
+      updateScore();
+      render();
+      startTimer();
+    }
+
+    document.querySelectorAll(".emoji").forEach(el => {
+      el.onclick = () => {
+        const parent = el.parentElement;
+        parent.querySelectorAll(".emoji").forEach(e => e.classList.remove("selected"));
+        el.classList.add("selected");
+      };
+    });
+
+    function render() {
+      boardEl.innerHTML = "";
+      board.forEach((val, i) => {
+        const cell = document.createElement("div");
+        cell.className = "cell";
+        cell.textContent = val || "";
         cell.onclick = () => makeMove(i);
-        board.appendChild(cell);
+        boardEl.appendChild(cell);
       });
+      statusEl.textContent = `Ходит ${players[current]}`;
     }
 
     function makeMove(i) {
-      if (cells[i]) return;
-      cells[i] = current;
-      current = current === '💗' ? '💙' : '💗';
-      status.textContent = `Ходит ${current}`;
-      renderBoard();
+      if (board[i]) return;
+      board[i] = players[current];
+      if (checkWin(players[current])) {
+        alert(`Победа: ${players[current]}!`);
+        scores[current]++;
+        localStorage.setItem("wolfik_scores", JSON.stringify(scores));
+        resetGame();
+        return;
+      }
+      if (board.every(cell => cell)) {
+        alert("Ничья!");
+        resetGame();
+        return;
+      }
+      current = 1 - current;
+      render();
+      resetTimer();
     }
 
-    renderBoard();
+    function startTimer() {
+      timeLeft = 10;
+      timerBar.style.width = "100%";
+      timer = setInterval(() => {
+        timeLeft--;
+        timerBar.style.width = (timeLeft * 10) + "%";
+        if (timeLeft <= 0) {
+          clearInterval(timer);
+          autoMove();
+        }
+      }, 1000);
+    }
+
+    function resetTimer() {
+      clearInterval(timer);
+      startTimer();
+    }
+
+    function autoMove() {
+      const empty = board.map((v, i) => v === null ? i : null).filter(v => v !== null);
+      if (empty.length > 0) {
+        const rand = empty[Math.floor(Math.random() * empty.length)];
+        makeMove(rand);
+      }
+    }
+
+    function resetGame() {
+      board = Array(9).fill(null);
+      updateScore();
+      render();
+      resetTimer();
+    }
+
+    function updateScore() {
+      scoreEl.textContent = `${players[0]} ${scores[0]} — ${scores[1]} ${players[1]}`;
+    }
+
+    function checkWin(sym) {
+      const wins = [
+        [0,1,2],[3,4,5],[6,7,8],
+        [0,3,6],[1,4,7],[2,5,8],
+        [0,4,8],[2,4,6]
+      ];
+      return wins.some(comb => comb.every(i => board[i] === sym));
+    }
   </script>
 </body>
 </html>
